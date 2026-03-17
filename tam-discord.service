@@ -1,0 +1,21 @@
+[Unit]
+Description=Tam Discord Bridge
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/tam
+ExecStart=/usr/bin/python3 %h/tam/tam-discord.py
+Restart=on-failure
+RestartSec=10
+
+# Load environment from .env
+EnvironmentFile=%h/tam/.env
+
+# Logging
+StandardOutput=append:%h/tam/logs/discord-service.log
+StandardError=append:%h/tam/logs/discord-service.log
+
+[Install]
+WantedBy=default.target
