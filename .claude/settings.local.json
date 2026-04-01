@@ -1,0 +1,156 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pyenv uninstall:*)",
+      "Bash(pyenv global:*)",
+      "Bash(cd /home/aldric/Project-Ender && python -m project_ender.stratified_corpus --db src/corpus.db --per-bucket 1112 --max-games 50000 --seed 42 2>&1)",
+      "Read(//usr/bin/**)",
+      "Bash(.venv/bin/python -m project_ender.stratified_corpus --db src/corpus.db --per-bucket 1112 --max-games 50000 --seed 42)",
+      "Bash(poetry run:*)",
+      "Bash(ollama list:*)",
+      "Bash(ollama pull:*)",
+      "Bash(curl -s http://localhost:11434/api/generate -d '{\"model\":\"deepseek-r1:8b\",\"prompt\":\"Say hello\",\"stream\":false}' -H 'Content-Type: application/json' 2>&1 | head -20)",
+      "Bash(chmod +x /home/aldric/Project-Ender/scripts/label_*.sh)",
+      "Bash(curl -s http://100.126.84.49:1234/v1/chat/completions -H \"Content-Type: application/json\" -d '{\"model\":\"gpt-oss-20b\",\"messages\":[{\"role\":\"user\",\"content\":\"Reply with just this JSON: {\\\\\"action_id\\\\\": 14, \\\\\"confidence\\\\\": 0.9, \\\\\"reasoning\\\\\": \\\\\"test\\\\\"}\"}],\"max_tokens\":100}' 2>&1)",
+      "Bash(ls -la /home/aldric/tam/*.py 2>/dev/null | head -20)",
+      "Bash(cd /home/aldric/Project-Ender && curl -s -X POST http://localhost:1234/v1/chat/completions -H \"Content-Type: application/json\" -d '{\"model\": \"gpt-oss-20b\", \"messages\": [{\"role\": \"user\", \"content\": \"Say hello as JSON: {\\\\\"msg\\\\\": \\\\\"...\\\\\"}\"}], \"temperature\": 0.3, \"max_tokens\": 64, \"response_format\": {\"type\": \"json_schema\", \"json_schema\": {\"name\": \"test\", \"strict\": true, \"schema\": {\"type\": \"object\", \"properties\": {\"msg\": {\"type\": \"string\"}}, \"required\": [\"msg\"], \"additionalProperties\": false}}}}' 2>&1)",
+      "Bash(curl -s http://100.126.84.49:1234/v1/models 2>&1)",
+      "Bash(curl -s -X POST http://100.126.84.49:1234/v1/chat/completions -H \"Content-Type: application/json\" -d '{\"model\": \"gpt-oss-20b\", \"messages\": [{\"role\": \"user\", \"content\": \"Pick a number from [3,7,12]. Respond as JSON.\"}], \"temperature\": 0.3, \"max_tokens\": 64, \"response_format\": {\"type\": \"json_schema\", \"json_schema\": {\"name\": \"test\", \"strict\": true, \"schema\": {\"type\": \"object\", \"properties\": {\"action_id\": {\"type\": \"integer\", \"enum\": [3,7,12]}, \"confidence\": {\"type\": \"number\"}}, \"required\": [\"action_id\", \"confidence\"], \"additionalProperties\": false}}}}' 2>&1)",
+      "Bash(find /home/aldric/Project-Ender -type f -name \"*.csv\" -o -name \"*.json\" -o -name \"*.jsonl\" -o -name \"*.ndjson\" 2>/dev/null | head -20)",
+      "Bash(find /home/aldric/tam -type f \\\\\\( -name \"*.csv\" -o -name \"*.json\" -o -name \"*.jsonl\" -o -name \"*ender*\" -o -name \"*corpus*\" -o -name \"*oracle*\" -o -name \"*label*\" \\\\\\) 2>/dev/null | head -30)",
+      "Bash(cd /home/aldric/Project-Ender && sqlite3 src/corpus.db \"SELECT COUNT\\(*\\) FROM states; SELECT COUNT\\(*\\) FROM labels;\")",
+      "Bash(cd /home/aldric/Project-Ender && sqlite3 src/corpus.db \".schema labels\" && sqlite3 src/corpus.db \".schema states\")",
+      "Bash(cd /home/aldric/Project-Ender && sqlite3 -header -separator '|||' src/corpus.db \"\nSELECT s.id, s.turn, l.teacher, l.action_id, l.confidence, s.valid_action_ids, s.state_summary, l.reasoning\nFROM labels l\nJOIN states s ON l.state_id = s.id\nORDER BY RANDOM\\(\\)\nLIMIT 5;\n\")",
+      "mcp__tam-memory__recall",
+      "Bash(curl -s http://localhost:1234/v1/models | python3 -m json.tool 2>&1 | head -30)",
+      "Bash(curl -s http://100.126.84.49:1234/v1/models | python3 -m json.tool 2>&1)",
+      "Bash(cd /home/aldric/Project-Ender && poetry run python -c \"\nimport json, subprocess\nfrom project_ender.oracle.prompts import build_prompt\nfrom project_ender.skirmish.adapter import SkirmishAdapter\n\nadapter = SkirmishAdapter\\(\\)\nstate_summary = 'Turn 17. You are Blue.\\\\n\\\\nZone layout \\(0=left, 6=right\\):\\\\n  Zone 0: you=0, enemy=0 — empty\\\\n  Zone 1: you=0, enemy=2 — ENEMY zone\\\\n  Zone 2: you=0, enemy=2 — ENEMY zone\\\\n  Zone 3: you=0, enemy=2 — ENEMY zone\\\\n  Zone 4: you=2, enemy=0 — YOUR zone\\\\n  Zone 5: you=2, enemy=0 — YOUR zone\\\\n  Zone 6: you=2, enemy=0 — YOUR zone\\\\n\\\\nYou hold 3 zones \\(streak: 0 turns\\). Enemy holds 3 zones \\(streak: 0 turns\\).\\\\nYour units: 6. Enemy units: 6.\\\\nWin condition: hold >=4 zones for 3 consecutive turns, or eliminate all enemy units.'\n\nvalid_actions = [3, 4, 5, 6, 10, 11, 12, 13, 14, 15, 16, 17]\nprompt = build_prompt\\(state_summary, adapter.action_space, valid_actions\\)\n\nbody = {\n    'model': 'mistralai/ministral-3-14b-reasoning',\n    'messages': [{'role': 'user', 'content': prompt}],\n    'temperature': 0.3,\n    'max_tokens': 512,\n    'response_format': {\n        'type': 'json_schema',\n        'json_schema': {\n            'name': 'oracle_label',\n            'strict': True,\n            'schema': {\n                'type': 'object',\n                'properties': {\n                    'action_id': {'type': 'integer', 'enum': valid_actions},\n                    'confidence': {'type': 'number'},\n                    'reasoning': {'type': 'string'},\n                },\n                'required': ['action_id', 'confidence', 'reasoning'],\n                'additionalProperties': False,\n            },\n        },\n    },\n}\n\nresult = subprocess.run\\(\n    ['curl', '-s', '-X', 'POST', 'http://100.126.84.49:1234/v1/chat/completions',\n     '-H', 'Content-Type: application/json', '-d', json.dumps\\(body\\)],\n    capture_output=True, text=True, timeout=300\n\\)\nprint\\('=== RAW RESPONSE ==='\\)\nprint\\(result.stdout[:3000]\\)\nprint\\(\\)\nresp = json.loads\\(result.stdout\\)\nmsg = resp['choices'][0]['message']\nprint\\('=== MESSAGE KEYS ==='\\)\nprint\\(list\\(msg.keys\\(\\)\\)\\)\nprint\\(\\)\nfor k, v in msg.items\\(\\):\n    print\\(f'=== message.{k} ==='\\)\n    print\\(repr\\(v\\)\\)\n    print\\(\\)\n\" 2>&1)",
+      "Bash(cd /home/aldric/Project-Ender && sqlite3 src/corpus.db \"SELECT state_id, teacher, action_id, confidence, substr\\(reasoning, 1, 80\\) FROM labels WHERE teacher LIKE '%ministral%'\")",
+      "Bash(find /home/aldric/Project-Ender -name \"*.parquet\" -o -name \"*.jsonl\" -o -name \"*.csv\" 2>/dev/null | head -20)",
+      "Bash(find /home/aldric -path \"*Project-Ender*\" -type f -size +1M 2>/dev/null | head -20)",
+      "Bash(sqlite3 /home/aldric/Project-Ender/src/corpus.db \".tables\" 2>/dev/null)",
+      "Bash(sqlite3 /home/aldric/Project-Ender/src/corpus.db \"SELECT DISTINCT teacher FROM labels LIMIT 20;\" 2>/dev/null)",
+      "Bash(sqlite3 /home/aldric/Project-Ender/src/corpus.db \"SELECT teacher, COUNT\\(*\\) as label_count FROM labels GROUP BY teacher ORDER BY label_count DESC;\" 2>/dev/null)",
+      "Bash(sqlite3 /home/aldric/Project-Ender/src/corpus.db \"SELECT teacher, MIN\\(action_id\\), MAX\\(action_id\\), AVG\\(confidence\\) FROM labels WHERE teacher LIKE '%ministral%' GROUP BY teacher;\" 2>/dev/null)",
+      "Bash(sqlite3 /home/aldric/Project-Ender/src/corpus.db \"SELECT COUNT\\(*\\) as total_states FROM states;\" 2>/dev/null)",
+      "Bash(sqlite3 /home/aldric/Project-Ender/src/corpus.db \"SELECT COUNT\\(*\\) as total_consensus FROM consensus;\" 2>/dev/null)",
+      "Bash(sqlite3 /home/aldric/Project-Ender/src/corpus.db \"SELECT state_id, action_id, confidence, reasoning FROM labels WHERE teacher = 'lmstudio_mistralai_ministral-3-14b-reasoning' LIMIT 3;\" 2>/dev/null)",
+      "Bash(sqlite3 /home/aldric/Project-Ender/src/corpus.db \"SELECT action_id, COUNT\\(*\\) as count FROM labels WHERE teacher = 'lmstudio_mistralai_ministral-3-14b-reasoning' GROUP BY action_id ORDER BY action_id;\" 2>/dev/null)",
+      "Bash(grep -l \"ministral\\\\|label.*distribution\\\\|corpus\\\\|annotation\" /home/aldric/.claude/projects/-home-aldric-tam/*.jsonl 2>/dev/null | head -5)",
+      "Bash(sqlite3 /home/aldric/Project-Ender/src/corpus.db \".schema\" 2>/dev/null)",
+      "Bash(sqlite3 /home/aldric/Project-Ender/src/corpus.db \"SELECT COUNT\\(*\\) as total_labels FROM labels;\" 2>/dev/null)",
+      "Bash(cd /home/aldric/Project-Ender && sqlite3 src/corpus.db \"SELECT action_id, COUNT\\(*\\) as cnt, ROUND\\(AVG\\(confidence\\), 3\\) as avg_conf FROM labels WHERE teacher = 'lmstudio_mistralai_ministral-3-14b-reasoning' GROUP BY action_id ORDER BY cnt DESC\")",
+      "Bash(cd /home/aldric/Project-Ender && sqlite3 src/corpus.db \"SELECT COUNT\\(DISTINCT state_id\\) as states_labeled, COUNT\\(*\\) as total_labels FROM labels WHERE teacher = 'lmstudio_mistralai_ministral-3-14b-reasoning'\")",
+      "Bash(cd /home/aldric/Project-Ender && sqlite3 src/corpus.db \"\nSELECT action_id, \n  ROUND\\(100.0 * cnt / 437, 1\\) as ministral_pct,\n  ROUND\\(100.0 * other_cnt / 30024, 1\\) as others_pct\nFROM \\(\n  SELECT m.action_id, m.cnt, COALESCE\\(o.cnt, 0\\) as other_cnt\n  FROM \\(SELECT action_id, COUNT\\(*\\) as cnt FROM labels WHERE teacher = 'lmstudio_mistralai_ministral-3-14b-reasoning' GROUP BY action_id\\) m\n  LEFT JOIN \\(SELECT action_id, COUNT\\(*\\) as cnt FROM labels WHERE teacher IN \\('lmstudio_qwen3-14b', 'lmstudio_gpt-oss-20b', 'lmstudio_deepseek-r1-distill-qwen-14b'\\) GROUP BY action_id\\) o ON m.action_id = o.action_id\n  UNION\n  SELECT o.action_id, COALESCE\\(m.cnt, 0\\), o.cnt\n  FROM \\(SELECT action_id, COUNT\\(*\\) as cnt FROM labels WHERE teacher IN \\('lmstudio_qwen3-14b', 'lmstudio_gpt-oss-20b', 'lmstudio_deepseek-r1-distill-qwen-14b'\\) GROUP BY action_id\\) o\n  LEFT JOIN \\(SELECT action_id, COUNT\\(*\\) as cnt FROM labels WHERE teacher = 'lmstudio_mistralai_ministral-3-14b-reasoning' GROUP BY action_id\\) m ON m.action_id = o.action_id\n  WHERE m.action_id IS NULL\n\\)\nORDER BY action_id\n\")",
+      "Bash(cd /home/aldric/Project-Ender && sqlite3 src/corpus.db \"\nSELECT l.state_id, l.action_id as ministral_action, l.confidence as m_conf, \n  substr\\(l.reasoning, 1, 200\\) as m_reasoning,\n  o.action_id as majority_action, o.cnt as majority_votes\nFROM labels l\nJOIN \\(\n  SELECT state_id, action_id, COUNT\\(*\\) as cnt\n  FROM labels \n  WHERE teacher IN \\('lmstudio_qwen3-14b', 'lmstudio_gpt-oss-20b', 'lmstudio_deepseek-r1-distill-qwen-14b'\\)\n  GROUP BY state_id, action_id\n  HAVING cnt >= 2\n\\) o ON l.state_id = o.state_id\nWHERE l.teacher = 'lmstudio_mistralai_ministral-3-14b-reasoning'\n  AND l.action_id != o.action_id\n  AND o.action_id = 14\nLIMIT 5\n\")",
+      "Bash(cd /home/aldric/Project-Ender && sqlite3 src/corpus.db \"\nSELECT l.state_id, l.action_id as ministral_action, l.confidence as m_conf,\n  substr\\(l.reasoning, 1, 300\\) as m_reasoning\nFROM labels l\nWHERE l.teacher = 'lmstudio_mistralai_ministral-3-14b-reasoning'\n  AND l.action_id = 2\nLIMIT 5\n\")",
+      "Bash(cd /home/aldric/Project-Ender && sqlite3 src/corpus.db \"SELECT DISTINCT teacher FROM labels ORDER BY teacher\")",
+      "Bash(curl -s http://100.126.84.49:1234/v1/models 2>/dev/null | python3 -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(m['id']\\) for m in data.get\\('data',[]\\)]\" 2>/dev/null || echo \"LM Studio not reachable\")",
+      "Bash(sqlite3 /home/aldric/Project-Ender/src/corpus.db \".schema\")",
+      "Bash(sqlite3 /home/aldric/Project-Ender/src/corpus.db \"SELECT COUNT\\(*\\) as state_count FROM states; SELECT COUNT\\(*\\) as label_count FROM labels; SELECT COUNT\\(*\\) as consensus_count FROM consensus;\")",
+      "Bash(sqlite3 /home/aldric/Project-Ender/src/corpus.db \"SELECT DISTINCT teacher FROM labels ORDER BY teacher;\")",
+      "Bash(sqlite3 /home/aldric/Project-Ender/src/corpus.db \"SELECT teacher, COUNT\\(*\\) as label_count FROM labels GROUP BY teacher ORDER BY teacher;\")",
+      "Bash(sqlite3 /home/aldric/Project-Ender/src/corpus.db \"SELECT s.id, s.game_id, s.turn, s.state_summary, s.valid_action_ids FROM states LIMIT 1;\")",
+      "Bash(sqlite3 /home/aldric/Project-Ender/src/corpus.db \"SELECT rowid, game_id, turn, state_summary, valid_action_ids FROM states LIMIT 1;\")",
+      "Bash(sqlite3 /home/aldric/Project-Ender/src/corpus.db \"SELECT state_id, teacher, action_id, confidence, reasoning FROM labels LIMIT 2;\")",
+      "Bash(cd /home/aldric/Project-Ender && sqlite3 src/corpus.db \"\nSELECT teacher, COUNT\\(*\\) as labels, \n       ROUND\\(AVG\\(confidence\\), 3\\) as avg_conf,\n       ROUND\\(MIN\\(confidence\\), 3\\) as min_conf,\n       ROUND\\(MAX\\(confidence\\), 3\\) as max_conf\nFROM labels \nGROUP BY teacher \nORDER BY labels DESC;\n\")",
+      "Bash(cd /home/aldric/Project-Ender && sqlite3 src/corpus.db \"\nSELECT teacher, action_id, COUNT\\(*\\) as cnt\nFROM labels\nWHERE teacher LIKE '%gemma%'\nGROUP BY teacher, action_id\nORDER BY teacher, cnt DESC;\n\")",
+      "Bash(cd /home/aldric/Project-Ender && sqlite3 src/corpus.db \"\nSELECT COUNT\\(*\\) as total_states FROM states;\nSELECT COUNT\\(*\\) as gemma_labelled FROM labels WHERE teacher LIKE '%gemma%';\n\")",
+      "Bash(cd /home/aldric/Project-Ender && sqlite3 src/corpus.db \"\n-- Compare action distributions: Gemma vs completed teachers\nSELECT action_id,\n  ROUND\\(100.0 * SUM\\(CASE WHEN teacher LIKE '%gemma%' THEN 1 ELSE 0 END\\) / \n    NULLIF\\(SUM\\(CASE WHEN teacher LIKE '%gemma%' THEN 1 ELSE 0 END\\), 0\\), 1\\) as gemma_pct,\n  ROUND\\(100.0 * SUM\\(CASE WHEN teacher = 'lmstudio_qwen3-14b' THEN 1 ELSE 0 END\\) / \n    NULLIF\\(SUM\\(CASE WHEN teacher = 'lmstudio_qwen3-14b' THEN 1 ELSE 0 END\\), 0\\), 1\\) as qwen3_pct,\n  ROUND\\(100.0 * SUM\\(CASE WHEN teacher = 'lmstudio_gpt-oss-20b' THEN 1 ELSE 0 END\\) / \n    NULLIF\\(SUM\\(CASE WHEN teacher = 'lmstudio_gpt-oss-20b' THEN 1 ELSE 0 END\\), 0\\), 1\\) as gptoss_pct,\n  ROUND\\(100.0 * SUM\\(CASE WHEN teacher = 'claude' THEN 1 ELSE 0 END\\) / \n    NULLIF\\(SUM\\(CASE WHEN teacher = 'claude' THEN 1 ELSE 0 END\\), 0\\), 1\\) as claude_pct\nFROM labels\nGROUP BY action_id\nORDER BY action_id;\n\")",
+      "Bash(cd /home/aldric/Project-Ender && sqlite3 src/corpus.db \"\n-- Actions Gemma never picks\nSELECT action_id FROM \\(\n  SELECT DISTINCT action_id FROM labels WHERE teacher != 'lmstudio_google_gemma-3-12b'\n\\) WHERE action_id NOT IN \\(\n  SELECT DISTINCT action_id FROM labels WHERE teacher = 'lmstudio_google_gemma-3-12b'\n\\);\n-- Confidence distribution buckets for Gemma\nSELECT \n  CASE \n    WHEN confidence < 0.7 THEN '<0.70'\n    WHEN confidence < 0.8 THEN '0.70-0.79'\n    WHEN confidence < 0.9 THEN '0.80-0.89'\n    ELSE '0.90+'\n  END as conf_bucket,\n  COUNT\\(*\\) as cnt,\n  ROUND\\(100.0 * COUNT\\(*\\) / 1511, 1\\) as pct\nFROM labels \nWHERE teacher LIKE '%gemma%'\nGROUP BY conf_bucket\nORDER BY conf_bucket;\n\")",
+      "Bash(mkdir -p /home/aldric/.claude/skills/ender-corpus && cp /home/aldric/tam/.claude/skills/ender-corpus/SKILL.md /home/aldric/.claude/skills/ender-corpus/SKILL.md)",
+      "Bash(sqlite3 /home/aldric/Project-Ender/src/corpus.db \"SELECT teacher, COUNT\\(*\\) FROM labels GROUP BY teacher;\")",
+      "Bash(sqlite3 /home/aldric/Project-Ender/src/corpus.db \"DELETE FROM labels WHERE teacher = 'lmstudio_gpt-oss-20b'; SELECT changes\\(\\);\")",
+      "Bash(sqlite3 /home/aldric/tam/tam_memory.db \".schema\" 2>/dev/null | head -30)",
+      "Bash(chmod +x /home/aldric/tam/.claude/hooks/stray-thought.sh)",
+      "Bash(pip show:*)",
+      "Bash(python3 -c \"import dcs; print\\(dcs.__file__\\)\" 2>&1)",
+      "Bash(ls -la /home/aldric/tam/*.py 2>/dev/null)",
+      "Bash(find /home/aldric -name \"*dcs*\" -o -name \"*mission*\" 2>/dev/null | grep -v \".cache\" | head -20)",
+      "Bash(grep -r \"socket\\\\|dcs\\\\|mission\" /home/aldric/tam --include=\"*.py\" --include=\"*.md\" 2>/dev/null | head -20)",
+      "Bash(grep -r \"dcs\\\\|DCS\\\\|mission\\\\|lua\\\\|game\" /home/aldric/tam/*.md 2>/dev/null | head -30)",
+      "Bash(find /home/aldric/Project-Ender -name \"Makefile\" -o -name \".pre-commit-config.yaml\" | xargs ls -lah 2>/dev/null | head -20)",
+      "Bash(poetry add:*)",
+      "Bash(pip install:*)",
+      "Bash(python3 -c \"import dcs; help\\(dcs.Mission\\)\" 2>&1 | head -60)",
+      "Bash(python3 -c \"import dcs; print\\(dcs.__file__\\)\")",
+      "Bash(find /home/aldric/.pyenv/versions/3.12.13/lib/python3.12/site-packages/dcs -name \"*example*\" -o -name \"*test*\" 2>/dev/null | head -20)",
+      "Bash(grep -n \"def airport_by_name\\\\|def airport_by_id\\\\|class Airport\" /home/aldric/.pyenv/versions/3.12.13/lib/python3.12/site-packages/dcs/terrain/*.py | head -30)",
+      "Read(//home/aldric/Project-Ender/**)",
+      "Bash(python3 -m project_ender.dcs.build_mission --output /tmp/test.miz)",
+      "Bash(python3 -c \"import inspect, dcs; print\\(inspect.signature\\(dcs.Mission.flight_group_from_airport\\)\\)\")",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "tam-memory"
+  ],
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/aldric/tam/.claude/hooks/inject-time.sh",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "bash /home/aldric/tam/.claude/hooks/stray-thought.sh",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "bash /home/aldric/tam/.claude/hooks/pre-reflect.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/aldric/tam/.claude/hooks/session-summary.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/aldric/tam/.claude/hooks/recent-context.sh",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "bash /home/aldric/tam/.claude/hooks/infra-health.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/aldric/tam/.claude/hooks/pre-compact-rescue.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

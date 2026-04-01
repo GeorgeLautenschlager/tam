@@ -1,0 +1,15 @@
+[Unit]
+Description=Tam Autonomous Supervisor (LangGraph)
+After=network.target tam-discord.service
+
+[Service]
+Type=simple
+User=aldric
+WorkingDirectory=/home/aldric/tam
+ExecStart=/usr/bin/python3 /home/aldric/tam/tam-supervisor.py --loop
+Restart=on-failure
+RestartSec=30
+Environment=TAM_HOME=/home/aldric/tam
+
+[Install]
+WantedBy=default.target

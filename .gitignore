@@ -1,0 +1,12 @@
+.cron-session
+.env
+.venv/
+__pycache__/
+ender_corpus.db
+logs/
+logs/*
+supervisor-state.db
+tam_memory.db
+vault_index.db
+vault_index.db-shm
+vault_index.db-wal

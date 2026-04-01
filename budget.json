@@ -1,0 +1,7 @@
+{
+  "daily_limit_usd": 20.00,
+  "weekly_limit_usd": 40.00,
+  "threshold_pct": 80,
+  "discord_reserve_pct": 20,
+  "enabled": true
+}
