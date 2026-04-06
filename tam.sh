@@ -3,8 +3,11 @@
 # Invokes Claude Code in headless mode, pointing at the config files.
 # 
 # Usage:
-#   ./tam.sh              # normal cron run
-#   ./tam.sh "check my calendar for tomorrow"   # ad-hoc prompt
+#   ./tam.sh                          # normal cron run (Sonnet)
+#   ./tam.sh "do this thing"          # ad-hoc prompt
+#   ./tam.sh --deliberate "plan X"    # Opus — deep reasoning
+#   ./tam.sh --flow "build Y"         # Sonnet — practical execution (default)
+#   ./tam.sh --reflex "quick check"   # Haiku — fast, lightweight
 #
 # Cron example (heartbeat every 15 min, schedule.json controls actual runs):
 #   */15 * * * * /home/aldric/tam/tam.sh >> /home/aldric/tam/logs/cron.log 2>&1
@@ -23,10 +26,17 @@ SKIP_GATES=false
 
 # ── Parse flags ───────────────────────────────────────────────────────────────
 # --force skips pause, schedule, and budget checks
+# --deliberate / --flow / --reflex select cognitive mode (see SOUL.md)
 if [[ "${1:-}" == "--force" ]]; then
     SKIP_GATES=true
     shift
 fi
+
+case "${1:-}" in
+    --deliberate) TAM_MODEL="opus";   shift ;;
+    --flow)       TAM_MODEL="sonnet"; shift ;;
+    --reflex)     TAM_MODEL="haiku";  shift ;;
+esac
 
 # ── Pause check ───────────────────────────────────────────────────────────────
 # Emergency stop: touch .tam-pause to halt all cron runs. Only George removes it.

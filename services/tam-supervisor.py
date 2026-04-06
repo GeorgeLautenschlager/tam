@@ -92,6 +92,50 @@ SENSE_INTERVAL_SECONDS = 60       # How often SENSE runs
 ACT_TIMEOUT_SECONDS = 600         # Max time for an ACT invocation
 ACT_MIN_GAP_SECONDS = 120         # Minimum gap between consecutive ACT calls
 
+# ── Cognitive Modes ──────────────────────────────────────────────────────────
+#
+# Tam's identity persists across models: SOUL.md + memories + behavioral patterns.
+# Different models are different *modes of cognition*, not different identities.
+#
+#   Deliberate (Opus)  — deep reasoning, nuanced judgment, long planning horizons
+#   Flow (Sonnet)      — practical execution, good enough for most work
+#   Reflex (Haiku)     — lightweight, reactive, high-throughput
+#
+# Budget pressure causes graceful downshift: Opus→Sonnet→Haiku.
+
+COGNITIVE_MODES = {
+    "deliberate": "opus",    # George's tasks, architectural work, identity/soul
+    "flow":      "sonnet",   # Self-directed priorities, standard dev
+    "reflex":    "haiku",    # Routine checks, ingestion, simple updates
+}
+
+# Budget thresholds for downshifting (% of daily budget used)
+DOWNSHIFT_THRESHOLD = 30   # Above this, step each mode down one tier
+
+
+def select_cognitive_mode(task_type: str, budget_pct: float) -> str:
+    """Choose the right model based on task type and budget pressure.
+
+    Returns a model shorthand: 'opus', 'sonnet', or 'haiku'.
+    """
+    base_mode = {
+        "george_task":  "deliberate",
+        "priority":     "flow",
+        "routine":      "reflex",
+    }.get(task_type, "flow")
+
+    model = COGNITIVE_MODES[base_mode]
+
+    # Budget-pressure downshift
+    if budget_pct > DOWNSHIFT_THRESHOLD:
+        downshift = {"opus": "sonnet", "sonnet": "haiku", "haiku": "haiku"}
+        model = downshift[model]
+        log.info(f"COGNITION: budget pressure ({budget_pct:.0f}%), downshift {base_mode} → {model}")
+    else:
+        log.info(f"COGNITION: {base_mode} → {model}")
+
+    return model
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [supervisor] %(levelname)s %(message)s",
@@ -315,7 +359,7 @@ def decide(state: SupervisorState) -> SupervisorState:
         log.debug(f"DECIDE → wait (min gap: {remaining}s remaining)")
         return {**state, "decision": "wait", "act_reason": f"min gap ({remaining}s)"}
 
-    # George's tasks take priority
+    # George's tasks take priority — Deliberate mode (Opus, or downshifted)
     if state["has_queued_tasks"]:
         task = state["queued_tasks"][0]
         log.info(f"DECIDE → act (task queue: {task[:60]})")
@@ -331,10 +375,10 @@ def decide(state: SupervisorState) -> SupervisorState:
             "decision": "act",
             "act_reason": f"task queue: {task[:60]}",
             "act_prompt": prompt,
-            "act_model": "sonnet",
+            "act_model": select_cognitive_mode("george_task", daily_pct),
         }
 
-    # Self-directed work from priorities
+    # Self-directed work from priorities — Flow mode (Sonnet, or downshifted)
     if state["has_active_priority"]:
         priority = state["active_priority"]
         log.info(f"DECIDE → act (active priority: {priority[:60]})")
@@ -349,7 +393,7 @@ def decide(state: SupervisorState) -> SupervisorState:
             "decision": "act",
             "act_reason": f"active priority: {priority[:60]}",
             "act_prompt": prompt,
-            "act_model": "sonnet",
+            "act_model": select_cognitive_mode("priority", daily_pct),
         }
 
     # Promote first queued priority if nothing active

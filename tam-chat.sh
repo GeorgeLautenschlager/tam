@@ -2,9 +2,12 @@
 # tam-chat.sh — Interactive conversation with Tam
 #
 # Usage:
-#   ./tam-chat.sh                  # new conversation
-#   ./tam-chat.sh --resume         # continue last session
-#   ./tam-chat.sh --resume <id>    # continue specific session
+#   ./tam-chat.sh                      # new conversation (Opus)
+#   ./tam-chat.sh --resume             # continue last session
+#   ./tam-chat.sh --resume <id>        # continue specific session
+#   ./tam-chat.sh --deliberate         # Opus — deep reasoning (default for chat)
+#   ./tam-chat.sh --flow               # Sonnet — practical execution
+#   ./tam-chat.sh --reflex             # Haiku — fast, lightweight
 
 set -euo pipefail
 
@@ -42,6 +45,9 @@ while [[ $# -gt 0 ]]; do
             TAM_MODEL="${2:?--model requires a value}"
             shift 2
             ;;
+        --deliberate) TAM_MODEL="opus";   shift ;;
+        --flow)       TAM_MODEL="sonnet"; shift ;;
+        --reflex)     TAM_MODEL="haiku";  shift ;;
         --resume)
             if [[ -n "${2:-}" && "${2:-}" != --* ]]; then
                 RESUME_ARGS="--resume ${2}"
