@@ -23,9 +23,9 @@ import sys
 from datetime import datetime, date, timedelta
 from pathlib import Path
 
-TAM_HOME = Path(__file__).parent
-USAGE_LOG = TAM_HOME / "USAGE.log"
-BUDGET_CONFIG = TAM_HOME / "budget.json"
+TAM_HOME = Path(__file__).parent.parent  # scripts/ -> tam/
+USAGE_LOG = TAM_HOME / "data" / "USAGE.log"
+BUDGET_CONFIG = TAM_HOME / "data" / "budget.json"  # Already correct now
 
 # Matches both formats:
 #   2026-03-17T15:12:14.068357 | discord | cost=$0.038 | ...

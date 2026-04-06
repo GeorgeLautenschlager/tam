@@ -25,7 +25,7 @@ import sqlite_vec
 # ── Config ───────────────────────────────────────────────────────────────────
 
 TAM_HOME = Path(os.environ.get("TAM_HOME", Path.home() / "tam"))
-DB_PATH = TAM_HOME / "vault_index.db"
+DB_PATH = TAM_HOME / "data" / "vault_index.db"
 EMBED_MODEL = "nomic-embed-text"
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
 VAULTS_ROOT = Path("/home/aldric/vaults")

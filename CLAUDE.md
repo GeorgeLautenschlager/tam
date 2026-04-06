@@ -26,8 +26,8 @@ Tam has a persistent knowledge graph (2500+ facts, 4000+ edges) built from all p
 - Don't use `recall` as a replacement for reading STATE.md or BOOT.md — those are always loaded
 
 ### Ingestion
-- Nightly at 3:03am: `tam-ingest-cron.sh` processes new Claude Code sessions + Discord logs
-- Manual: `python3 tam-ingest.py` (new sessions), `--discord`, `--seed-memory`
+- Nightly at 3:03am: `scripts/tam-ingest-cron.sh` processes new Claude Code sessions + Discord logs
+- Manual: `python3 scripts/tam-ingest.py` (new sessions), `--discord`, `--seed-memory`
 - Each session is chunked and extracted via Haiku, deduplicated by embedding similarity
 
 ## File conventions

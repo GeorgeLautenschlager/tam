@@ -31,7 +31,7 @@ import sqlite_vec
 # ── Config ───────────────────────────────────────────────────────────────────
 
 TAM_HOME = Path(os.environ.get("TAM_HOME", Path.home() / "tam"))
-DB_PATH = TAM_HOME / "tam_memory.db"
+DB_PATH = TAM_HOME / "data" / "tam_memory.db"
 SESSION_DIR = Path.home() / ".claude" / "projects" / "-home-aldric-tam"
 DISCORD_LOG = TAM_HOME / "logs" / "discord.log"
 MEMORY_DIR = Path.home() / ".claude" / "projects" / "-home-aldric-tam" / "memory"

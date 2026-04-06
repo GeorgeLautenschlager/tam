@@ -3,8 +3,11 @@
 # Invokes Claude Code in headless mode, pointing at the config files.
 # 
 # Usage:
-#   ./tam.sh              # normal cron run
-#   ./tam.sh "check my calendar for tomorrow"   # ad-hoc prompt
+#   ./tam.sh                          # normal cron run (Sonnet)
+#   ./tam.sh "do this thing"          # ad-hoc prompt
+#   ./tam.sh --deliberate "plan X"    # Opus — deep reasoning
+#   ./tam.sh --flow "build Y"         # Sonnet — practical execution (default)
+#   ./tam.sh --reflex "quick check"   # Haiku — fast, lightweight
 #
 # Cron example (heartbeat every 15 min, schedule.json controls actual runs):
 #   */15 * * * * /home/aldric/tam/tam.sh >> /home/aldric/tam/logs/cron.log 2>&1
@@ -17,16 +20,23 @@ TAM_LOGS="${TAM_HOME}/logs"
 TAM_MAX_TURNS="${TAM_MAX_TURNS:-50}"
 TAM_TIMEOUT="${TAM_TIMEOUT:-600}"  # 10 minutes in seconds
 LOCK_FILE="${TAM_HOME}/.tam.lock"
-SCHEDULE_FILE="${TAM_HOME}/schedule.json"
+SCHEDULE_FILE="${TAM_HOME}/data/schedule.json"
 PAUSE_FILE="${TAM_HOME}/.tam-pause"
 SKIP_GATES=false
 
 # ── Parse flags ───────────────────────────────────────────────────────────────
 # --force skips pause, schedule, and budget checks
+# --deliberate / --flow / --reflex select cognitive mode (see SOUL.md)
 if [[ "${1:-}" == "--force" ]]; then
     SKIP_GATES=true
     shift
 fi
+
+case "${1:-}" in
+    --deliberate) TAM_MODEL="opus";   shift ;;
+    --flow)       TAM_MODEL="sonnet"; shift ;;
+    --reflex)     TAM_MODEL="haiku";  shift ;;
+esac
 
 # ── Pause check ───────────────────────────────────────────────────────────────
 # Emergency stop: touch .tam-pause to halt all cron runs. Only George removes it.
@@ -136,7 +146,7 @@ MODEL=$(resolve_model "$TAM_MODEL")
 # Check budget before doing anything expensive. Fail-safe: if checker errors, skip run.
 BUDGET_CONTEXT=""
 if [[ "$SKIP_GATES" != "true" ]]; then
-    BUDGET_JSON=$(python3 "${TAM_HOME}/tam-budget.py" --source cron 2>/dev/null) || BUDGET_EXIT=$?
+    BUDGET_JSON=$(python3 "${TAM_HOME}/scripts/tam-budget.py" --source cron 2>/dev/null) || BUDGET_EXIT=$?
     BUDGET_EXIT=${BUDGET_EXIT:-0}
 
     if [[ $BUDGET_EXIT -eq 2 ]]; then
@@ -149,7 +159,7 @@ if [[ "$SKIP_GATES" != "true" ]]; then
         DAILY_PCT=$(echo "$BUDGET_JSON" | jq -r '.daily_pct // "?"' 2>/dev/null)
         WEEKLY_PCT=$(echo "$BUDGET_JSON" | jq -r '.weekly_pct // "?"' 2>/dev/null)
         echo "$(date '+%Y-%m-%d_%H%M') | cron | budget_blocked | ${REASON} (daily=${DAILY_PCT}%, weekly=${WEEKLY_PCT}%)" \
-            >> "${TAM_HOME}/USAGE.log"
+            >> "${TAM_HOME}/data/USAGE.log"
         echo "$(date '+%Y-%m-%d_%H%M') Budget blocked (${REASON}). Skipping run." >> "${TAM_HOME}/logs/cron.log"
         exit 0
     fi
@@ -199,14 +209,14 @@ fi
 # Injecting SOUL.md as a system prompt means it's always in context without
 # using a Read tool call (saves a turn and tokens on every run).
 # Pass file contents directly — no compound string building, no quoting headaches.
-SYSTEM_PROMPT=$(cat "${TAM_HOME}/SOUL.md")
+SYSTEM_PROMPT=$(cat "${TAM_HOME}/docs/SOUL.md")
 
 # ── Allowed tools ───────────────────────────────────────────────────────────
 # Read/Write for state files, Bash for system commands and task work.
 ALLOWED_TOOLS="Read,Write,Edit,Glob,Grep,Bash"
 
 # ── GitHub activity ─────────────────────────────────────────────────────────
-GITHUB_FINDINGS=$(python3 "${TAM_HOME}/tam-github.py" 2>>"$RUN_LOG" || echo "")
+GITHUB_FINDINGS=$(python3 "${TAM_HOME}/scripts/tam-github.py" 2>>"$RUN_LOG" || echo "")
 if [[ -n "$GITHUB_FINDINGS" && "$GITHUB_FINDINGS" != "NONE" ]]; then
     PROMPT="${PROMPT}
 
@@ -276,7 +286,7 @@ SESSION_ID=$(echo "$RESULT" | jq -r '.session_id // "unknown"' 2>/dev/null || ec
 # ── Rate limit detection ──────────────────────────────────────────────────
 if [[ "$COST" == "0" ]] && echo "$TEXT_RESULT" | grep -q "You've hit your limit"; then
     echo "Rate limited: ${TEXT_RESULT}" >> "$RUN_LOG"
-    echo "${TIMESTAMP} | cron | rate_limited | ${TEXT_RESULT}" >> "${TAM_HOME}/USAGE.log"
+    echo "${TIMESTAMP} | cron | rate_limited | ${TEXT_RESULT}" >> "${TAM_HOME}/data/USAGE.log"
 
     # Parse the reset time and suppress runs until then.
     # Rate limit message format: "resets 12pm (America/Toronto)"
@@ -323,7 +333,7 @@ if [[ "$SESSION_ID" != "unknown" && -n "$SESSION_ID" ]]; then
 fi
 
 # ── Usage ledger ────────────────────────────────────────────────────────────
-echo "${TIMESTAMP} | cron | cost=${COST} | session=${SESSION_ID}" >> "${TAM_HOME}/USAGE.log"
+echo "${TIMESTAMP} | cron | cost=${COST} | session=${SESSION_ID}" >> "${TAM_HOME}/data/USAGE.log"
 
 # ── Post-run schedule update ──────────────────────────────────────────────────
 # Fallback: if Tam didn't update schedule.json during the run, bump next_run_after

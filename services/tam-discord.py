@@ -30,7 +30,7 @@ from discord import app_commands
 # ── Config ──────────────────────────────────────────────────────────────────
 
 TAM_HOME = Path(os.environ.get("TAM_HOME", Path.home() / "tam"))
-SOUL_PATH = TAM_HOME / "SOUL.md"
+SOUL_PATH = TAM_HOME / "docs" / "SOUL.md"
 MAX_TURNS = int(os.environ.get("TAM_MAX_TURNS", "10"))
 TIMEOUT_SECONDS = int(os.environ.get("TAM_TIMEOUT", "600"))
 
@@ -54,7 +54,7 @@ LISTEN_CHANNEL = os.environ.get("TAM_DISCORD_CHANNEL", "tam")
 SESSION_TIMEOUT_HOURS = int(os.environ.get("TAM_SESSION_TIMEOUT_HOURS", "4"))
 
 # Where channel sessions are persisted
-SESSION_FILE = TAM_HOME / "sessions.json"
+SESSION_FILE = TAM_HOME / "data" / "sessions.json"
 
 # Discord message length limit
 MAX_MESSAGE_LENGTH = 2000
@@ -162,7 +162,7 @@ async def ask_tam(message: str, channel_id: int, allowed_tools: str = "Read,Writ
         log.info(f"Discord budget blocked: {reason}")
         return (
             f"I'm over budget for today (${daily_used} / ${daily_limit} daily). "
-            f"I'll be back tomorrow, or you can adjust `budget.json` to override."
+            f"I'll be back tomorrow, or you can adjust `data/budget.json` to override."
         )
 
     session_id = get_session_id(channel_id)
@@ -256,7 +256,7 @@ async def ask_tam(message: str, channel_id: int, allowed_tools: str = "Read,Writ
 
 def log_usage(cost: float, usage: dict) -> None:
     """Append usage data to a simple ledger."""
-    ledger = TAM_HOME / "USAGE.log"
+    ledger = TAM_HOME / "data" / "USAGE.log"
     timestamp = datetime.now().isoformat()
     entry = f"{timestamp} | discord | cost=${cost} | tokens={json.dumps(usage)}\n"
     with open(ledger, "a") as f:

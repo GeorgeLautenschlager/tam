@@ -19,10 +19,10 @@ from pathlib import Path
 
 # ── Config ───────────────────────────────────────────────────────────────────
 
-TAM_HOME = Path(os.environ.get("TAM_HOME", Path.home() / "tam"))
+TAM_HOME = Path(os.environ.get("TAM_HOME", Path.home() / "tam"))  # Already gets TAM_HOME properly
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 GITHUB_REPO = os.environ.get("GITHUB_REPO", "GeorgeLautenschlager/cvi-aid")
-STATE_FILE = TAM_HOME / "github_state.json"
+STATE_FILE = TAM_HOME / "data" / "github_state.json"  # Correct path
 
 # ── GitHub API ───────────────────────────────────────────────────────────────
 

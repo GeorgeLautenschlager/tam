@@ -10,10 +10,10 @@ VENV="${TAM_HOME}/.venv/bin/python"
 echo "=== Ingest run: $(date '+%Y-%m-%d %H:%M') ==="
 
 # Ingest new Claude Code sessions
-"$VENV" "${TAM_HOME}/tam-ingest.py" 2>&1
+"$VENV" "${TAM_HOME}/scripts/tam-ingest.py" 2>&1
 
 # Re-ingest Discord logs (deletes old entry first, re-processes full log)
 sqlite3 "${TAM_HOME}/tam_memory.db" "DELETE FROM sessions_ingested WHERE session_id = 'discord_log';" 2>/dev/null || true
-"$VENV" "${TAM_HOME}/tam-ingest.py" --discord 2>&1
+"$VENV" "${TAM_HOME}/scripts/tam-ingest.py" --discord 2>&1
 
 echo "=== Ingest complete ==="
