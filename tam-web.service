@@ -1,0 +1,21 @@
+[Unit]
+Description=Tam Web Chat
+# Only needs the local network stack — no internet required
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/tam
+ExecStart=/usr/bin/python3 %h/tam/tam-web.py
+Restart=on-failure
+RestartSec=10
+
+# Load environment from .env
+EnvironmentFile=%h/tam/.env
+
+# Logging
+StandardOutput=append:%h/tam/logs/web-service.log
+StandardError=append:%h/tam/logs/web-service.log
+
+[Install]
+WantedBy=default.target
