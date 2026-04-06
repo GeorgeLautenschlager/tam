@@ -6,7 +6,7 @@ from pathlib import Path
 
 import discord
 
-TAM_HOME = Path(__file__).parent
+TAM_HOME = Path(__file__).parent.parent  # scripts/ -> tam/
 ICON_DIR = TAM_HOME / "icon"
 
 # Load token

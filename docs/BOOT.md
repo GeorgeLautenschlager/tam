@@ -5,7 +5,7 @@
 
 Your working directory is `~/tam`. All your files are here.
 
-SOUL.md is pre-loaded as your system prompt — you already have it. Read the remaining files in this order:
+docs/SOUL.md is pre-loaded as your system prompt — you already have it. Read the remaining files in this order:
 1. **`/home/aldric/vaults/tam/Memory/Learned.md`** — who George is, what matters, durable conclusions
 2. **`/home/aldric/vaults/tam/Memory/Observations.md`** — recent observations (skim)
 3. **STATE.md** — what happened last run, what's pending
@@ -48,7 +48,7 @@ Write `schedule.json` with `modified_by: "tam"`, `modified_at` (ISO timestamp), 
 
 Example:
 ```bash
-cat > ~/tam/schedule.json << 'EOF'
+cat > ~/tam/data/schedule.json << 'EOF'
 {
   "enabled": true,
   "next_run_after": "2026-03-25T21:00:00",

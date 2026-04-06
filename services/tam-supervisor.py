@@ -51,8 +51,8 @@ PRIORITIES_FILE = VAULT_ROOT / "State" / "Priorities.md"
 STATE_FILE = TAM_HOME / "STATE.md"
 LOCK_FILE = TAM_HOME / ".tam.lock"
 PAUSE_FILE = TAM_HOME / ".tam-pause"
-SCHEDULE_FILE = TAM_HOME / "schedule.json"
-CHECKPOINT_DB = TAM_HOME / "supervisor-state.db"
+SCHEDULE_FILE = TAM_HOME / "data" / "schedule.json"
+CHECKPOINT_DB = TAM_HOME / "data" / "supervisor-state.db"
 SUPERVISOR_THREAD_ID = "supervisor"   # LangGraph thread ID for checkpoint scoping
 
 # ── Checkpoint helpers ────────────────────────────────────────────────────────
@@ -225,7 +225,7 @@ def run_claude(prompt: str, model: str = "sonnet", timeout: int = ACT_TIMEOUT_SE
     }
     resolved_model = model_map.get(model, model)
 
-    soul_file = TAM_HOME / "SOUL.md"
+    soul_file = TAM_HOME / "docs" / "SOUL.md"
     system_prompt = soul_file.read_text() if soul_file.exists() else ""
 
     cmd = [

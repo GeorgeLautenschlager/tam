@@ -2,7 +2,7 @@
   "mcpServers": {
     "tam-memory": {
       "command": "/home/aldric/tam/.venv/bin/python",
-      "args": ["/home/aldric/tam/tam-memory-mcp.py"]
+      "args": ["/home/aldric/tam/mcp/tam-memory-mcp.py"]
     }
   }
 }

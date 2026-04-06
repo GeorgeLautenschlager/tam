@@ -32,7 +32,7 @@ resolve_model() {
 
 TAM_MODEL="${TAM_MODEL:-opus}"
 
-SYSTEM_PROMPT=$(cat "${TAM_HOME}/SOUL.md")
+SYSTEM_PROMPT=$(cat "${TAM_HOME}/docs/SOUL.md")
 
 # ── Parse args ──────────────────────────────────────────────────────────────
 RESUME_ARGS=""
