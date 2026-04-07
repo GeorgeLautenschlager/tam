@@ -41,6 +41,10 @@ from typing_extensions import TypedDict
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.sqlite import SqliteSaver
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from tam_stimulus import StimulusProcessor
+from tam_responses import ResponseWriter
+
 # ── Config ────────────────────────────────────────────────────────────────────
 
 TAM_HOME = Path(os.environ.get("TAM_HOME", Path.home() / "tam"))
@@ -52,8 +56,13 @@ STATE_FILE = TAM_HOME / "STATE.md"
 LOCK_FILE = TAM_HOME / ".tam.lock"
 PAUSE_FILE = TAM_HOME / ".tam-pause"
 SCHEDULE_FILE = TAM_HOME / "data" / "schedule.json"
+STIMULI_DB = TAM_HOME / "stimuli.db"
 CHECKPOINT_DB = TAM_HOME / "data" / "supervisor-state.db"
 SUPERVISOR_THREAD_ID = "supervisor"   # LangGraph thread ID for checkpoint scoping
+
+# Shared instances — initialised in main()
+stimulus_processor: Optional[StimulusProcessor] = None
+response_writer: Optional[ResponseWriter] = None
 
 # ── Checkpoint helpers ────────────────────────────────────────────────────────
 
@@ -113,10 +122,15 @@ COGNITIVE_MODES = {
 DOWNSHIFT_THRESHOLD = 30   # Above this, step each mode down one tier
 
 
-def select_cognitive_mode(task_type: str, budget_pct: float) -> str:
+def select_cognitive_mode(task_type: str, budget_pct: float, budget_tier: str = "normal") -> str:
     """Choose the right model based on task type and budget pressure.
 
     Returns a model shorthand: 'opus', 'sonnet', or 'haiku'.
+
+    budget_tier overrides the legacy budget_pct threshold when provided:
+        minimal  → always haiku
+        conserve → downshift one tier (opus→sonnet, sonnet→haiku, haiku→haiku)
+        normal   → no change (legacy DOWNSHIFT_THRESHOLD still applies as fallback)
     """
     base_mode = {
         "george_task":  "deliberate",
@@ -125,11 +139,18 @@ def select_cognitive_mode(task_type: str, budget_pct: float) -> str:
     }.get(task_type, "flow")
 
     model = COGNITIVE_MODES[base_mode]
+    downshift_map = {"opus": "sonnet", "sonnet": "haiku", "haiku": "haiku"}
 
-    # Budget-pressure downshift
-    if budget_pct > DOWNSHIFT_THRESHOLD:
-        downshift = {"opus": "sonnet", "sonnet": "haiku", "haiku": "haiku"}
-        model = downshift[model]
+    if budget_tier == "minimal":
+        model = "haiku"
+        log.info(f"COGNITION: budget minimal, forcing haiku ({base_mode} overridden)")
+    elif budget_tier == "conserve":
+        downshifted = downshift_map[model]
+        log.info(f"COGNITION: budget conserve, downshift {base_mode} ({model}) → {downshifted}")
+        model = downshifted
+    elif budget_pct > DOWNSHIFT_THRESHOLD:
+        # Legacy fallback: downshift on budget pressure when tier is "normal"
+        model = downshift_map[model]
         log.info(f"COGNITION: budget pressure ({budget_pct:.0f}%), downshift {base_mode} → {model}")
     else:
         log.info(f"COGNITION: {base_mode} → {model}")
@@ -167,6 +188,11 @@ class SupervisorState(TypedDict):
     act_result: str
     act_cost: float
     act_session_id: str
+
+    # Stimulus pipeline
+    stimulus_batch_id: str          # batch_id from StimulusProcessor
+    stimulus_response_channel: str  # channel to route response back to (e.g. "web")
+    has_interactive_stimulus: bool   # web/discord message waiting for a reply?
 
     # Loop control
     iteration: int
@@ -238,7 +264,7 @@ def check_budget() -> dict:
     """Run tam-budget.py and return the parsed JSON."""
     try:
         result = subprocess.run(
-            ["python3", str(TAM_HOME / "tam-budget.py"), "--source", "cron"],
+            ["python3", str(TAM_HOME / "scripts" / "tam-budget.py"), "--source", "cron"],
             capture_output=True, text=True, timeout=10
         )
         if result.returncode == 0:
@@ -247,6 +273,28 @@ def check_budget() -> dict:
     except Exception as e:
         log.warning(f"Budget check failed: {e}")
         return {"allowed": True, "reason": "budget-check-error-failsafe"}
+
+
+def classify_budget(daily_pct: float, weekly_pct: float) -> str:
+    """Return a budget tier string based on daily and weekly usage percentages.
+
+    Tiers (worst of daily/weekly):
+        hard_stop  — >85%: interactive gets canned response, autonomous suspended
+        suspended  — >70%: autonomous suspended, interactive haiku only
+        minimal    — >50%: autonomous haiku only, interactive downshifted
+        conserve   — >30%: autonomous downshifted one tier
+        normal     — <=30%: no restrictions
+    """
+    worst = max(daily_pct, weekly_pct)
+    if worst > 85:
+        return "hard_stop"
+    if worst > 70:
+        return "suspended"
+    if worst > 50:
+        return "minimal"
+    if worst > 30:
+        return "conserve"
+    return "normal"
 
 
 def run_claude(prompt: str, model: str = "sonnet", timeout: int = ACT_TIMEOUT_SECONDS) -> dict:
@@ -305,13 +353,32 @@ def run_claude(prompt: str, model: str = "sonnet", timeout: int = ACT_TIMEOUT_SE
 # ── Graph nodes ───────────────────────────────────────────────────────────────
 
 def sense(state: SupervisorState) -> SupervisorState:
-    """SENSE: Free, frequent. Read environment to understand what's happening."""
+    """SENSE: Free, frequent. Read environment and stimulus pipeline."""
     log.debug("SENSE")
 
     now = datetime.now()  # local time — quiet hours are configured in local tz
 
     queued_tasks = read_task_queue()
     active_priority, queued_priorities = read_priorities()
+
+    # Check stimulus pipeline for interactive messages (web, discord)
+    has_interactive = False
+    batch_id = ""
+    response_channel = ""
+
+    if stimulus_processor is not None:
+        ctx = stimulus_processor.process()
+        if ctx.total_count > 0:
+            batch_id = ctx.batch_id
+            log.info(f"SENSE: {ctx.total_count} stimuli in batch {batch_id[:8]}")
+            for batch in ctx.batches:
+                if batch.source in ("web", "discord"):
+                    has_interactive = True
+                    response_channel = batch.channel or batch.source
+                    # Prepend interactive messages to the task list so DECIDE sees them
+                    for item in batch.items:
+                        queued_tasks.insert(0, f"[{batch.source}] {item}")
+                    break  # handle one interactive batch per cycle
 
     return {
         **state,
@@ -323,12 +390,63 @@ def sense(state: SupervisorState) -> SupervisorState:
         "paused": is_paused(),
         "hour": now.hour,
         "iteration": state.get("iteration", 0) + 1,
+        "has_interactive_stimulus": has_interactive,
+        "stimulus_batch_id": batch_id,
+        "stimulus_response_channel": response_channel,
     }
 
 
 def decide(state: SupervisorState) -> SupervisorState:
     """DECIDE: Rules-based. Should we act, wait, or pause?"""
     log.debug("DECIDE")
+
+    # Interactive stimuli (web/discord) get top priority — George is waiting.
+    # They bypass quiet hours and min gap. Budget uses DAILY pct only (not weekly)
+    # so a heavy week doesn't silence George mid-day.
+    if state.get("has_interactive_stimulus"):
+        messages = [t for t in state["queued_tasks"] if t.startswith("[web]") or t.startswith("[discord]")]
+        combined = "\n".join(m.split("] ", 1)[1] for m in messages) if messages else ""
+        source = "web" if any(t.startswith("[web]") for t in messages) else "discord"
+
+        budget = check_budget()
+        daily_pct = budget.get("daily_pct", 0)
+        weekly_pct = budget.get("weekly_pct", 0)
+        # For interactive: tier is based on daily only (weekly tension resolved here)
+        interactive_tier = classify_budget(daily_pct, daily_pct)
+
+        if interactive_tier == "hard_stop":
+            log.info(f"DECIDE → wait (interactive {source}: hard_stop, daily={daily_pct:.0f}%)")
+            channel = state.get("stimulus_response_channel", "")
+            if response_writer is not None and channel:
+                response_writer.complete_by_channel(
+                    channel,
+                    "Budget's tapped out for today. I can see your message — "
+                    "I'll pick it up when the daily budget resets.",
+                    {"model": "none", "cost": 0},
+                )
+            return {
+                **state,
+                "decision": "wait",
+                "act_reason": f"interactive {source}: hard_stop (daily={daily_pct:.0f}%)",
+            }
+
+        log.info(f"DECIDE → act (interactive {source}: {combined[:60]}, tier={interactive_tier})")
+        prompt = (
+            "You are Tam. George is messaging you directly via the local web interface. "
+            "Read BOOT.md and follow the wake-up sequence, but keep it lightweight — "
+            "George is waiting for a reply.\n\n"
+            f"George's message:\n{combined}\n\n"
+            "Respond conversationally. Keep it concise. "
+            "Read STATE.md or MEMORY.md if you need context, but don't do it for "
+            "simple questions or casual chat — use judgment about when it's worth the tokens."
+        )
+        return {
+            **state,
+            "decision": "act",
+            "act_reason": f"interactive {source}: {combined[:60]}",
+            "act_prompt": prompt,
+            "act_model": select_cognitive_mode("george_task", daily_pct, interactive_tier),
+        }
 
     # Hard stops
     if state["paused"]:
@@ -347,9 +465,19 @@ def decide(state: SupervisorState) -> SupervisorState:
 
     daily_pct = budget.get("daily_pct", 0)
     weekly_pct = budget.get("weekly_pct", 0)
-    if max(daily_pct, weekly_pct) > 50:
-        log.info(f"DECIDE → wait (budget conservation: daily={daily_pct}%, weekly={weekly_pct}%)")
-        return {**state, "decision": "wait", "act_reason": "budget >50%"}
+    # Autonomous work: gate on max(daily, weekly) for full picture
+    budget_tier = classify_budget(daily_pct, weekly_pct)
+    if budget_tier in ("suspended", "hard_stop"):
+        log.info(
+            f"DECIDE → wait (budget {budget_tier}: daily={daily_pct:.0f}%, weekly={weekly_pct:.0f}%)"
+        )
+        return {
+            **state,
+            "decision": "wait",
+            "act_reason": f"budget {budget_tier} (daily={daily_pct:.0f}%, weekly={weekly_pct:.0f}%)",
+        }
+    if budget_tier == "minimal":
+        log.info(f"DECIDE: budget minimal — autonomous work forced to haiku")
 
     # Minimum gap between ACT calls
     last_act = state.get("last_act_timestamp", 0)
@@ -375,7 +503,7 @@ def decide(state: SupervisorState) -> SupervisorState:
             "decision": "act",
             "act_reason": f"task queue: {task[:60]}",
             "act_prompt": prompt,
-            "act_model": select_cognitive_mode("george_task", daily_pct),
+            "act_model": select_cognitive_mode("george_task", daily_pct, budget_tier),
         }
 
     # Self-directed work from priorities — Flow mode (Sonnet, or downshifted)
@@ -393,7 +521,7 @@ def decide(state: SupervisorState) -> SupervisorState:
             "decision": "act",
             "act_reason": f"active priority: {priority[:60]}",
             "act_prompt": prompt,
-            "act_model": select_cognitive_mode("priority", daily_pct),
+            "act_model": select_cognitive_mode("priority", daily_pct, budget_tier),
         }
 
     # Promote first queued priority if nothing active
@@ -464,7 +592,7 @@ def act(state: SupervisorState) -> SupervisorState:
 
 
 def reflect(state: SupervisorState) -> SupervisorState:
-    """REFLECT: Note what happened. Update STATE.md with supervisor activity."""
+    """REFLECT: Note what happened. Update STATE.md and route responses back."""
     log.debug("REFLECT")
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -486,6 +614,23 @@ def reflect(state: SupervisorState) -> SupervisorState:
             STATE_FILE.write_text(
                 re.sub(r"\n## Supervisor act.*", entry, existing, flags=re.DOTALL)
             )
+
+    # Route response back to the originating channel (web, discord, etc.)
+    batch_id = state.get("stimulus_batch_id", "")
+    channel = state.get("stimulus_response_channel", "")
+    if response_writer is not None and batch_id and channel:
+        result_text = state.get("act_result", "") or "[no response]"
+        metadata = {
+            "model": state.get("act_model", ""),
+            "cost": state.get("act_cost", 0),
+            "session_id": state.get("act_session_id", ""),
+        }
+        updated = response_writer.complete_by_channel(channel, result_text, metadata)
+        if updated:
+            log.info(f"REFLECT: routed response to channel={channel} ({updated} responses)")
+        else:
+            log.debug(f"REFLECT: no pending responses for channel={channel}")
+
     log.debug("REFLECT complete")
     return state
 
@@ -552,6 +697,12 @@ def main():
 
     graph = build_graph()
 
+    # Initialise stimulus pipeline
+    global stimulus_processor, response_writer
+    stimulus_processor = StimulusProcessor(STIMULI_DB)
+    response_writer = ResponseWriter(STIMULI_DB)
+    log.info(f"Stimulus pipeline: {STIMULI_DB}")
+
     initial_state: SupervisorState = {
         "has_queued_tasks": False,
         "queued_tasks": [],
@@ -568,6 +719,9 @@ def main():
         "act_result": "",
         "act_cost": 0.0,
         "act_session_id": "",
+        "stimulus_batch_id": "",
+        "stimulus_response_channel": "",
+        "has_interactive_stimulus": False,
         "iteration": 0,
     }
 
