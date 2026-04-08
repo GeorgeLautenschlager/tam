@@ -574,9 +574,9 @@ def _promote_priority(priority_text: str) -> None:
 
 def act(state: SupervisorState) -> SupervisorState:
     """ACT: Spawn a Claude Code session (or local LLM fallback if enabled)."""
-    log.info(f"ACT [{state['act_model']}]: {state['act_reason']}")
-
     local_mode = os.environ.get("TAM_LOCAL_MODE", False)
+    log.info(f"ACT [{state['act_model']}]: {state['act_reason']}, local_mode={local_mode}")
+
     if local_mode:
         system_path = TAM_HOME / "docs" / "SOUL.md"
         soul_text = ""
