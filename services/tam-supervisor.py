@@ -44,6 +44,7 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from tam_stimulus import StimulusProcessor
 from tam_responses import ResponseWriter
+from services.tam_llm_runner import run_local
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
@@ -572,10 +573,23 @@ def _promote_priority(priority_text: str) -> None:
 
 
 def act(state: SupervisorState) -> SupervisorState:
-    """ACT: Spawn a Claude Code session to do real work."""
+    """ACT: Spawn a Claude Code session (or local LLM fallback if enabled)."""
     log.info(f"ACT [{state['act_model']}]: {state['act_reason']}")
 
-    result = run_claude(state["act_prompt"], model=state["act_model"])
+    local_mode = False
+    if local_mode:
+        system_path = TAM_HOME / "docs" / "SOUL.md"
+        soul_text = ""
+        if system_path.exists():
+            soul_text = system_path.read_text()
+
+        result = run_local(
+            prompt=state["act_prompt"],
+            model=state["act_model"],
+            system_prompt=soul_text,
+        )
+    else:
+        result = run_claude(state["act_prompt"], model=state["act_model"])
 
     log.info(
         f"ACT complete: cost=${result['cost']:.4f}, "
