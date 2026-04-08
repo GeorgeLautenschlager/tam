@@ -44,7 +44,7 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from tam_stimulus import StimulusProcessor
 from tam_responses import ResponseWriter
-from services.tam_llm_runner import run_local
+from tam_llm_runner import run_local
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
@@ -576,7 +576,7 @@ def act(state: SupervisorState) -> SupervisorState:
     """ACT: Spawn a Claude Code session (or local LLM fallback if enabled)."""
     log.info(f"ACT [{state['act_model']}]: {state['act_reason']}")
 
-    local_mode = False
+    local_mode = os.environ.get("TAM_LOCAL_MODE", False)
     if local_mode:
         system_path = TAM_HOME / "docs" / "SOUL.md"
         soul_text = ""
