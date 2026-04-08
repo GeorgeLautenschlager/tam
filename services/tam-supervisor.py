@@ -33,6 +33,8 @@ import sys
 import time
 import logging
 import uuid
+import lmstudio
+
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal, Optional
@@ -49,6 +51,7 @@ from tam_responses import ResponseWriter
 
 TAM_HOME = Path(os.environ.get("TAM_HOME", Path.home() / "tam"))
 VAULT_ROOT = Path.home() / "vaults" / "tam"
+SERVER_API_HOST = "192.168.50.216:1234"
 
 TASK_QUEUE_FILE = VAULT_ROOT / "State" / "Task Queue.md"
 PRIORITIES_FILE = VAULT_ROOT / "State" / "Priorities.md"
@@ -63,6 +66,8 @@ SUPERVISOR_THREAD_ID = "supervisor"   # LangGraph thread ID for checkpoint scopi
 # Shared instances — initialised in main()
 stimulus_processor: Optional[StimulusProcessor] = None
 response_writer: Optional[ResponseWriter] = None
+
+lmstudio.configure_default_client(SERVER_API_HOST)
 
 # ── Checkpoint helpers ────────────────────────────────────────────────────────
 
@@ -295,6 +300,19 @@ def classify_budget(daily_pct: float, weekly_pct: float) -> str:
     if worst > 30:
         return "conserve"
     return "normal"
+
+def run_local(prompt: str) -> dict:
+    """Run local LLM and return the result."""
+    system_path = TAM_HOME / "docs" / "SOUL.md"
+    soul_text = ""
+    if system_path.exists():
+        soul_text = system_path.read_text()
+    else:
+        log.warning(f"SOUL.md not found at {system_path}, running local LLM without it")
+
+    model = lmstudio.llm()
+    model.respond(prompt, system=soul_text)
+    
 
 
 def run_claude(prompt: str, model: str = "sonnet", timeout: int = ACT_TIMEOUT_SECONDS) -> dict:
@@ -572,10 +590,14 @@ def _promote_priority(priority_text: str) -> None:
 
 
 def act(state: SupervisorState) -> SupervisorState:
-    """ACT: Spawn a Claude Code session to do real work."""
-    log.info(f"ACT [{state['act_model']}]: {state['act_reason']}")
+    """ACT: Spawn a Claude Code session (or local LLM fallback if enabled)."""
+    local_mode = os.environ.get("TAM_LOCAL_MODE", False)
+    log.info(f"ACT [{state['act_model']}]: {state['act_reason']}, local_mode={local_mode}")
 
-    result = run_claude(state["act_prompt"], model=state["act_model"])
+    if local_mode:
+        result = run_local(prompt=state["act_prompt"])
+    else:
+        result = run_claude(state["act_prompt"], model=state["act_model"])
 
     log.info(
         f"ACT complete: cost=${result['cost']:.4f}, "
