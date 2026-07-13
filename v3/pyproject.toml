@@ -1,0 +1,21 @@
+[project]
+name = "tam"
+version = "0.1.0"
+description = "Tam — a cognitive agent built on Theseus"
+authors = [
+    { name = "George Lautenschlager", email = "georgelautenschlager@gmail.com" },
+]
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "theseus @ git+ssh://git@github.com/GeorgeLautenschlager/theseus.git@v0.1.1",
+]
+
+[project.scripts]
+tam = "tam:main"
+
+[tool.poetry]
+packages = [{ include = "tam.py" }]
+
+[build-system]
+requires = ["poetry-core>=2.0.0"]
+build-backend = "poetry.core.masonry.api"
