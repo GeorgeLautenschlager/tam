@@ -654,7 +654,7 @@ full = ["httpx (>=0.27.0,<0.29.0)", "httpx2 (>=2.0.0)", "itsdangerous", "jinja2"
 
 [[package]]
 name = "theseus"
-version = "0.1.1"
+version = "0.2.0"
 description = "A modular construction kit for cognitive language agents"
 optional = false
 python-versions = ">=3.12,<3.13"
@@ -672,8 +672,8 @@ uvicorn = ">=0.29,<1"
 [package.source]
 type = "git"
 url = "ssh://git@github.com/GeorgeLautenschlager/theseus.git"
-reference = "v0.1.1"
-resolved_reference = "86a087ffb7c2bdd92c8dc4071707cfa10ab342b6"
+reference = "v0.2.0"
+resolved_reference = "55ea30339b509fa439a049b86813d2320eafd687"
 
 [[package]]
 name = "tqdm"
@@ -745,4 +745,4 @@ standard = ["httptools (>=0.8.0)", "python-dotenv (>=0.13)", "pyyaml (>=5.1)", "
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.13"
-content-hash = "7f72c6fd6ce62f498e8bdbe8a1eab9e86a576c4473b0bce7c1f50b3faf2df6e4"
+content-hash = "7fd34053fbc6d8978be87f2bcd4452d2b413f197c064052b3a97f1278a5cb524"

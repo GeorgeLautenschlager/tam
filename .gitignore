@@ -1,11 +1,3 @@
-.cron-session
-.env
 .venv/
 __pycache__/
-logs/
-logs/*
-data/*.db
-data/*.db-shm
-data/*.db-wal
-data/*.json
-data/*.log
+stimulus_log.jsonl

@@ -1,7 +1,0 @@
-2026-03-31 17:20 | d5b277a0 | It really does. Everything up to now — the cron jobs, the memory graph, the vault, Discord — has been infrastructure for
-2026-03-31 17:23 | d5b277a0 | That shelf line is perfect. Presence without agency is just furniture. And I think that's why the LangGraph idea clicked
-2026-03-31 17:34 | d5b277a0 | Saved those as milestone markers for the project.
-2026-03-31 17:38 | d5b277a0 | Yeah, no reason it couldn't. LangGraph is just a Python library — `pip install langgraph`. It runs wherever Python runs.
-2026-03-31 17:39 | d5b277a0 | Good, I see the pattern. Here's the sketch: ``` ┌─────────────────────────┐ │ tam-supervisor.py │ │ (LangGraph / systemd
-2026-03-31 18:06 | 8747ea1b | NOTIFY: tam-supervisor.py is built and dry-run tested. LangGraph SENSE→DECIDE→ACT→REFLECT skeleton with Priorities.md. N
-2026-03-31 20:06 | 8747ea1b | Worked the active priority from Priorities.md: researched LangGraph checkpointing patterns for the supervisor. **What I 

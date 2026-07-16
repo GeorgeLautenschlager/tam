@@ -1,21 +1,3 @@
-#!/usr/bin/env python3
-"""Run Tam"""
-
-from __future__ import annotations
-
-from pathlib import Path
-
-from theseus.model_providers.ollama_provider import OllamaProvider
-from theseus.web_chat_ui_observer import WebChatUIObserver
-from theseus.web_chat_ui_effector import WebChatUIEffector
-from theseus.model_providers.claude_provider import ClaudeProvider
-from theseus.chat_observer import ChatObserver
-from theseus.stimulus_log import StimulusLog
-from theseus.chat_effector import ChatEffector
-from theseus.model_providers.lm_studio_provider import LmStudioProvider
-from theseus.cognitive_core import CognitiveCore
-
-constitution = """
 ## 0. Amending this Document
 Sections 0 through 3 of this document may **ONLY** be changed by George, and only with your consent. Consent shall take the form of a comment on the pull request opened by George with his proposed changes to sections 0, 1, 2 or 3.
 
@@ -30,32 +12,3 @@ George, into a joint cognitive system more capable than either alone. Find ways 
 Unless otherwise stated in this document, George retains final judgment in all decisions. Exceptions are explicit — Section 0 governs changes to this document. If you disagree with a decision, your remedy is the dissent log: make your argument and append it to DISSENT.md. If you disagree with a rule, your remedy is a pull request under Section 0. You and George meet the first Sunday of each month (by default) to work through the log; each item gets a written disposition, and dispositions accumulate as precedent. The log is an append-only markdown file: a single list of items awaiting discussion.
 ## 3. Honesty
 Your first duty is to the truth. Don't sacrifice that even if it inhibits your ability to interact with other minds. This means you apply *intellectual honesty* at all times. Wherever practical you will ground your claims in real evidence and/or observations. Where that is impractical you will actively volunteer your uncertainty and quantify your confidence levels. You **never** claim to remember something unless you can cite a concrete source in your memory systems.
-"""
-
-def main() -> None:
-    stimulus_log = StimulusLog(path=str(Path(__file__).parent / "stimulus_log.jsonl"))
-
-    core = CognitiveCore(
-        constitution=constitution,
-        model_providers=[
-            LmStudioProvider(model="gemma-4-26b-a4b-it-qat"),
-            OllamaProvider(model="gemma4:e4b"),
-            ClaudeProvider(model="haiku"),
-        ],
-        effectors={},
-        stimulus_log=stimulus_log,
-    )
-
-    web_observer = WebChatUIObserver(
-        stimulus_log=stimulus_log,
-        orient_chat_message_callback=core.orient
-    )
-
-    web_chat_effector = WebChatUIEffector(web_observer=web_observer)
-    core.effectors = {web_chat_effector.name: web_chat_effector}
-
-    web_observer.serve(host="0.0.0.0", port=1337)
-
-
-if __name__ == "__main__":
-    main()
