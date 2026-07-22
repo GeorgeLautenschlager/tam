@@ -5,17 +5,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from theseus.model_providers.ollama_provider import OllamaProvider
-from theseus.web_chat_ui_observer import WebChatUIObserver
-from theseus.web_chat_ui_effector import WebChatUIEffector
-from theseus.model_providers.claude_provider import ClaudeProvider
-from theseus.chat_observer import ChatObserver
-from theseus.stimulus_log import StimulusLog
-from theseus.chat_effector import ChatEffector
-from theseus.model_providers.lm_studio_provider import LmStudioProvider
-from theseus.cognitive_core import CognitiveCore
 from theseus.agentic_memory import AgenticMemory
+from theseus.cognitive_core import CognitiveCore
 from theseus.memory_store import MemoryStore
+from theseus.model_providers.claude_provider import ClaudeProvider
+from theseus.model_providers.lm_studio_provider import LmStudioProvider
+from theseus.model_providers.ollama_provider import OllamaProvider
+from theseus.stimulus_log import StimulusLog
+from theseus.tools.registry import all_tools
+from theseus.tools.web_chat import WebChat
+from theseus.web_chat_ui_observer import WebChatUIObserver
 
 constitution = (Path(__file__).parent / "CONSTITUTION.md").read_text()
 persona = (Path(__file__).parent / "PERSONA.md").read_text()
@@ -37,7 +36,7 @@ def main() -> None:
             LmStudioProvider(model="gemma-4-26b-a4b-it-qat"),
             OllamaProvider(model="gemma4:e4b"),
         ],
-        effectors={},
+        tools=all_tools(),
         memory=a_mem,
         stimulus_log=stimulus_log,
         name="Tam"
@@ -48,8 +47,10 @@ def main() -> None:
         orient_chat_message_callback=core.orient
     )
 
-    web_chat_effector = WebChatUIEffector(web_observer=web_observer)
-    core.effectors = {web_chat_effector.name: web_chat_effector}
+    # WebChat needs the observer, the observer needs core.orient, and the core needs
+    # the tool — so the web-chat "mouth" is wired in after the other three exist.
+    web_chat = WebChat(web_observer=web_observer)
+    core.tools[web_chat.name] = web_chat
 
     web_observer.serve(host="0.0.0.0", port=1337)
 
