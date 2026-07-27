@@ -1,3 +1,4 @@
 .venv/
 __pycache__/
-stimulus_log.jsonl
+*.jsonl
+
