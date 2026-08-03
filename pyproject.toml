@@ -7,7 +7,7 @@ authors = [
 ]
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    "theseus @ git+ssh://git@github.com/GeorgeLautenschlager/theseus.git@v0.8.0",
+    "theseus @ git+ssh://git@github.com/GeorgeLautenschlager/theseus.git@v0.8.1",
 ]
 
 [project.scripts]
