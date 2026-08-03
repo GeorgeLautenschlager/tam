@@ -13,6 +13,7 @@ from theseus.model_providers.claude_provider import ClaudeProvider
 from theseus.model_providers.lm_studio_provider import LmStudioProvider
 from theseus.model_providers.ollama_provider import OllamaProvider
 from theseus.stimulus_log import StimulusLog
+from theseus.time_observer import TimeObserver
 from theseus.tools.recall import RecallTool
 from theseus.tools.registry import all_tools
 from theseus.tools.web_chat import WebChat
@@ -68,13 +69,20 @@ def main() -> None:
 
     web_observer = WebChatUIObserver(
         stimulus_log=stimulus_log,
-        orient_chat_message_callback=core.orient
+        orient_chat_message_callback=core.orient_and_wait
     )
 
-    # WebChat needs the observer, the observer needs core.orient, and the core needs
-    # the tool — so the web-chat "mouth" is wired in after the other three exist.
+    # WebChat needs the observer, the observer needs core.orient_and_wait, and the core
+    # needs the tool — so the web-chat "mouth" is wired in after the other three exist.
     web_chat = WebChat(web_observer=web_observer)
     core.tools[web_chat.name] = web_chat
+
+    # Nudges Tam to orient every 15 minutes if anything new has landed in the log since
+    # the last wake, so idle periods don't leave external stimuli unattended indefinitely.
+    time_observer = TimeObserver(
+        stimulus_log, core.try_orient, self_actor=core.name, interval_seconds=15 * 60
+    )
+    time_observer.start()
 
     web_observer.serve(host="0.0.0.0", port=1337)
 
