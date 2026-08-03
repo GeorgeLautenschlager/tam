@@ -21,8 +21,10 @@ from theseus.web_chat_ui_observer import WebChatUIObserver
 
 constitution = (Path(__file__).parent / "CONSTITUTION.md").read_text()
 # PERSONA.md was folded into CONSTITUTION.md (Section 4+) so persona changes go through
-# the same PR/ratification process as everything else Tam is entitled to amend.
-persona = ""
+# the same PR/ratification process as everything else Tam is entitled to amend. That
+# leaves the `persona` slot in OODACore free, so GOALS.md rides there instead: goals
+# are meant to change freely, without a constitution amendment for every edit.
+persona = (Path(__file__).parent / "GOALS.md").read_text()
 
 def main() -> None:
     stimulus_log = StimulusLog(path=str(Path(__file__).parent / "stimulus_log.jsonl"))
