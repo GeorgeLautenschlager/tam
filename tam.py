@@ -8,7 +8,6 @@ from pathlib import Path
 
 from theseus.agentic_memory import AgenticMemory
 from theseus.auto_core import Autocore
-from theseus.context_assembler import ContextAssembler
 from theseus.memory_store import MemoryStore
 from theseus.model_providers.claude_provider import ClaudeProvider
 from theseus.model_providers.ollama_provider import OllamaProvider
@@ -57,19 +56,14 @@ def main() -> None:
     # persona slot, is now read natively by Autocore every turn.
     core.constitution = (HOME / "CONSTITUTION.md").read_text()
 
-    # Autocore builds a default-sized assembler; replace it with one sized for
-    # Claude Sonnet 5, which is what Tam actually runs on (see CADENCE.md: claude
-    # is the first rule, and its availability check is just `which claude`, so the
-    # local fallbacks almost never win). The budget is a fixed ceiling, not
-    # something that grows — and the Claude CLI reports no `usage`, so the
-    # chars-per-token estimate never calibrates here and stays on its seed. Both
-    # are fine at this size; revisit if the local providers ever become the usual
-    # path. window_size stays a backstop, not the control: Tam's events run ~380
-    # tokens each, so the default cap of 200 would bind at ~75k and quietly
-    # undercut the budget above.
-    core.context_assembler = ContextAssembler(
-        stimulus_log=core.stimulus_log, token_budget=120_000, window_size=1000
-    )
+    # The context budget is no longer set here. It was a fixed 120k sized for
+    # Claude, and it stayed 120k after CADENCE.md started routing the morning to a
+    # 128k local model — which is how Tam ended up prompting past its own window.
+    # Each cadence rule now declares its model's window (`context 128k`), so the
+    # budget follows whichever model actually won the turn. window_size stays a
+    # backstop rather than the control: Tam's events run ~350 tokens each, so the
+    # default cap of 200 would bind at ~70k and quietly undercut the real budget.
+    core.context_assembler.window_size = 1000
 
     a_mem = AgenticMemory(
         model_providers=[ClaudeProvider(model="claude-opus-5")],
