@@ -3,89 +3,101 @@
 
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 
 from theseus.agentic_memory import AgenticMemory
-from theseus.ooda_core import OODACore
-from theseus.mono_memory import MonoMemory
+from theseus.auto_core import Autocore
+from theseus.context_assembler import ContextAssembler
 from theseus.memory_store import MemoryStore
 from theseus.model_providers.claude_provider import ClaudeProvider
-from theseus.model_providers.lm_studio_provider import LmStudioProvider
 from theseus.model_providers.ollama_provider import OllamaProvider
-from theseus.stimulus_log import StimulusLog
-from theseus.time_observer import TimeObserver
 from theseus.tools.recall import RecallTool
 from theseus.tools.registry import all_tools
 from theseus.tools.web_chat import WebChat
 from theseus.web_chat_ui_observer import WebChatUIObserver
 
-constitution = (Path(__file__).parent / "CONSTITUTION.md").read_text()
-# PERSONA.md was folded into CONSTITUTION.md (Section 4+) so persona changes go through
-# the same PR/ratification process as everything else Tam is entitled to amend. That
-# leaves the `persona` slot in OODACore free, so GOALS.md rides there instead: goals
-# are meant to change freely, without a constitution amendment for every edit.
-persona = (Path(__file__).parent / "GOALS.md").read_text()
+HOME = Path(__file__).parent
+
+
+class TamCore(Autocore):
+    """Autocore plus Tam's agentic memory.
+
+    OODACore consolidated memory itself (`memory.form()` at loop termination);
+    Autocore has no memory slot, so the same one-consolidation-per-turn cadence
+    is restored here at the turn boundary, before sleeping. form() is a no-op
+    when nothing new has landed since the store's high-water mark. `memory` is
+    attached after construction because AgenticMemory needs the stimulus log
+    that Autocore itself creates.
+    """
+
+    memory: AgenticMemory
+
+    def _sleep(self) -> bool:
+        self.memory.form()
+        return super()._sleep()
+
 
 def main() -> None:
-    stimulus_log = StimulusLog(path=str(Path(__file__).parent / "stimulus_log.jsonl"))
+    # Model providers and tick pacing now live in CADENCE.md, and scheduled tasks
+    # in SCHEDULE.md — not here. The old TimeObserver 15-minute nudge is subsumed
+    # by the cadence tick; unlike the nudge, ticks fire even when nothing new has
+    # landed, which is the point: Tam now acts on its own, not only when poked.
+    core = TamCore(
+        name="Tam",
+        home_directory=HOME,
+        tools=all_tools(),
+    )
+
+    # Tam's ratified identity is CONSTITUTION.md (PERSONA.md was folded into it —
+    # see Section 4+ — so persona changes go through the same PR/ratification
+    # process as everything else). Autocore reads lowercase constitution.md and
+    # persona.md instead; the empty files it touches at boot are inert because the
+    # ratified text is loaded over them here. GOALS.md, which used to ride in the
+    # persona slot, is now read natively by Autocore every turn.
+    core.constitution = (HOME / "CONSTITUTION.md").read_text()
+
+    # Autocore builds a default-sized assembler; replace it with one sized for
+    # Claude Sonnet 5, which is what Tam actually runs on (see CADENCE.md: claude
+    # is the first rule, and its availability check is just `which claude`, so the
+    # local fallbacks almost never win). The budget is a fixed ceiling, not
+    # something that grows — and the Claude CLI reports no `usage`, so the
+    # chars-per-token estimate never calibrates here and stays on its seed. Both
+    # are fine at this size; revisit if the local providers ever become the usual
+    # path. window_size stays a backstop, not the control: Tam's events run ~380
+    # tokens each, so the default cap of 200 would bind at ~75k and quietly
+    # undercut the budget above.
+    core.context_assembler = ContextAssembler(
+        stimulus_log=core.stimulus_log, token_budget=120_000, window_size=1000
+    )
 
     a_mem = AgenticMemory(
         model_providers=[ClaudeProvider(model="claude-opus-5")],
         embedding_providers=[OllamaProvider(model="nomic-embed-text")],
-        store=MemoryStore(Path(__file__).parent / "a_mem.jsonl"),
-        stimulus_log=stimulus_log,
+        store=MemoryStore(HOME / "a_mem.jsonl"),
+        stimulus_log=core.stimulus_log,
     )
+    core.memory = a_mem
 
-    # Sized for Claude Sonnet 5, which is what Tam actually runs on: ClaudeProvider is
-    # first in the chain and its availability check is just `which claude`, so the local
-    # providers below are fallbacks that almost never win. The budget is a fixed ceiling,
-    # not something that grows — and the Claude CLI reports no `usage`, so MonoMemory's
-    # chars-per-token estimate never calibrates here either and stays on its seed. Both
-    # are fine at this size; revisit if the local providers ever become the usual path.
-    # window_size stays a backstop, not the control: Tam's events run ~380 tokens each,
-    # so the default cap of 200 would bind at ~75k and quietly undercut the budget above.
-    context_assembler = MonoMemory(
-        stimulus_log=stimulus_log, token_budget=120_000, window_size=1000
-    )
-
-    # Recall is a tool now, not something the context assembler does behind Tam's back.
-    # It is not in all_tools() because it needs a memory instance to bind to, so it is
-    # wired in here — without it Tam has no long-term memory at all.
+    # Recall is a tool, not something the context assembler does behind Tam's
+    # back. It is not in all_tools() because it needs a memory instance to bind
+    # to, so it is wired in here — without it Tam has no long-term memory at all.
     recall = RecallTool(a_mem)
-    tools = {**all_tools(), recall.name: recall}
+    core.tools[recall.name] = recall
 
-    core = OODACore(
-        constitution=constitution,
-        persona=persona,
-        context_assembler=context_assembler,
-        model_providers=[
-            ClaudeProvider(model="claude-sonnet-5"),
-            LmStudioProvider(model="gemma-4-26b-a4b-it-qat"),
-            OllamaProvider(model="gemma4:e4b"),
-        ],
-        tools=tools,
-        memory=a_mem,
-        stimulus_log=stimulus_log,
-        name="Tam"
-    )
-
+    # In front of an Autocore the observer has no cycle to drive: the core hears
+    # the appended chat message through its own StimulusLog subscription and cuts
+    # its sleep short itself, so `core.wake` here is just an idempotent nudge.
     web_observer = WebChatUIObserver(
-        stimulus_log=stimulus_log,
-        orient_chat_message_callback=core.orient_and_wait
+        stimulus_log=core.stimulus_log,
+        orient_chat_message_callback=core.wake,
     )
-
-    # WebChat needs the observer, the observer needs core.orient_and_wait, and the core
-    # needs the tool — so the web-chat "mouth" is wired in after the other three exist.
     web_chat = WebChat(web_observer=web_observer)
     core.tools[web_chat.name] = web_chat
 
-    # Nudges Tam to orient every 15 minutes if anything new has landed in the log since
-    # the last wake, so idle periods don't leave external stimuli unattended indefinitely.
-    time_observer = TimeObserver(
-        stimulus_log, core.try_orient, self_actor=core.name, interval_seconds=15 * 60
-    )
-    time_observer.start()
-
+    # The core loops on its own thread; uvicorn keeps the main thread so Ctrl+C
+    # still lands on its signal handlers.
+    threading.Thread(target=core.loop, name="tam-core-loop", daemon=True).start()
     web_observer.serve(host="0.0.0.0", port=1337)
 
 
