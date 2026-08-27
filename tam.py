@@ -48,14 +48,6 @@ def main() -> None:
         tools=all_tools(),
     )
 
-    # Tam's ratified identity is CONSTITUTION.md (PERSONA.md was folded into it —
-    # see Section 4+ — so persona changes go through the same PR/ratification
-    # process as everything else). Autocore reads lowercase constitution.md and
-    # persona.md instead; the empty files it touches at boot are inert because the
-    # ratified text is loaded over them here. GOALS.md, which used to ride in the
-    # persona slot, is now read natively by Autocore every turn.
-    core.constitution = (HOME / "CONSTITUTION.md").read_text()
-
     # The token budget follows whichever model won the turn (each CADENCE.md rule
     # declares its own `context 128k`), so this is only the event-count backstop.
     #
