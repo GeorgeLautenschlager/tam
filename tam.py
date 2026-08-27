@@ -56,14 +56,21 @@ def main() -> None:
     # persona slot, is now read natively by Autocore every turn.
     core.constitution = (HOME / "CONSTITUTION.md").read_text()
 
-    # The context budget is no longer set here. It was a fixed 120k sized for
-    # Claude, and it stayed 120k after CADENCE.md started routing the morning to a
-    # 128k local model — which is how Tam ended up prompting past its own window.
-    # Each cadence rule now declares its model's window (`context 128k`), so the
-    # budget follows whichever model actually won the turn. window_size stays a
-    # backstop rather than the control: Tam's events run ~350 tokens each, so the
-    # default cap of 200 would bind at ~70k and quietly undercut the real budget.
-    core.context_assembler.window_size = 1000
+    # The token budget follows whichever model won the turn (each CADENCE.md rule
+    # declares its own `context 128k`), so this is only the event-count backstop.
+    #
+    # It was 1000, on the reasoning that the cap should never bind before the token
+    # budget does. That was wrong in practice: with `context 800k` on the rule the
+    # budget never binds either, so the *entire* log went up on every turn and grew
+    # without limit. At 345 events / 150k tokens both Qwen3.8-27B and Gemma-4-31b
+    # stopped emitting tool calls — first replying in plain prose (which no observer
+    # delivers), then returning nothing at all. Reproduced against the same models:
+    # identical prompt and tools at ~3k tokens call tools 3/3; at 150k, 0/2.
+    #
+    # So the cap is the control after all, and it is set to hold the prompt inside
+    # the regime where tool calling actually works. Tam's events run ~440 tokens
+    # each, so 60 events is ~26k tokens and still several hours of history.
+    core.context_assembler.window_size = 60
 
     a_mem = AgenticMemory(
         model_providers=[ClaudeProvider(model="claude-opus-5")],

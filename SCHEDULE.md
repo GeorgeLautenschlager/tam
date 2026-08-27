@@ -12,3 +12,5 @@ backticks so they stay inert — remove the backticks to activate a line):
 `- [ ] every 30 minutes: Check queue depth`
 
 Anything else in this file is prose and is ignored.
+
+- [ ] daily @ 00:00: Prompt George for tomorrow's daily note (8PM EDT) <!-- last-fired: 2026-08-27T00:11:00.896766+00:00 -->

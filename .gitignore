@@ -1,4 +1,6 @@
 .venv/
 __pycache__/
 *.jsonl
-
+CURRENT_TASK.md
+TASKS.md
+GOALS.md

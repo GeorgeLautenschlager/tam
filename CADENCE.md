@@ -14,6 +14,7 @@ A rule that omits it falls back to a deliberately small window (4k) rather than
 guessing high — guessing high is what overruns.
 
 - 00:00-16:00: unsloth Qwen3.8-27B-GGUF, context 128k, tick every 5 minutes
-<!-- - 08:00-16:00: claude claude-sonnet-4-6, context 200k, tick every 15 minutes -->
-- 16:00-24:00: claude claude-opus-5-0, context 200k, tick every 30 minutes
+- 08:00-16:00: claude claude-sonnet-4-6, context 100k, tick every 15 minutes
+<!-- - 16:00-24:00: claude claude-opus-5-0, context 200k, tick every 30 minutes -->
+- 16:00-00:00: openrouter qwen/qwen3.8-27b, context 800k, tick every 30 minutes
 - default: ollama gemma4:e4b, context 4k, tick every 60 minutes
