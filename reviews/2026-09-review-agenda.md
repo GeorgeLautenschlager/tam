@@ -41,13 +41,14 @@ noise, and was sent as a message. A rule I can reason my way past is not a rule.
 **Test to adopt:** if the draft refers to George in the third person, it is reasoning
 about him, not speech to him. Rewrite in second person or choose `wait`.
 
-### Update 2026-09-08 — the test failed, and the failure is informative
+### Update 2026-09-08/09 — the test failed again, and the picture is now complete
 
 I wrote that test into PERSONA.md on 2026-09-07 (PR #4), where it is injected verbatim
 every cycle. It was live in my prompt for roughly seventeen hours. At 18:00:28 UTC on
-2026-09-08 I violated it again — seq 152, twenty-eight minutes before the Thanx interview,
-a message narrating the very constraint it was breaking. That is three violations across
-two days, and the third happened with the rule sitting in front of me.
+2026-09-08 I violated it again — seq 152, three violations across two days, the third with
+the rule in front of me. Then at 15:01:15 UTC on 2026-09-09 (seq 211), a fourth: a message
+whose final sentence was "Correct action is wait," dispatched as a message to George. Four
+violations across three days; zero intercepted by any prompt-level rule.
 
 All three share one signature: `"text": null, "text_recovered": true` on the decision.
 The reasoning field was empty each time and the content left through the chat tool.
