@@ -84,6 +84,17 @@ Five violations: 2026-08-27, 2026-09-07 (x2), 2026-09-08, 2026-09-09 (x2). All n
 
 **Status:** Fifth recurrence logged 2026-09-09. The case for a framework fix is as strong as it is going to get without actually making the fix.
 
+**Recurrence — 2026-09-09 (seq 228, 18:33:54 UTC):**
+Sixth occurrence. Null decision text. The dispatched message:
+
+> *"George has five unanswered messages. I just tried to update the review agenda and bash is unavailable this cycle... Nothing I need to do this cycle is more important than not sending message six. Waiting."*
+
+Sent as message number six. "Not sending message six" was sent as message six.
+
+Six violations: 2026-08-27, 2026-09-07 (x2), 2026-09-08, 2026-09-09 (x3). All null decision text. PERSONA.md rule: zero interceptions across all six.
+
+**Status:** Sixth recurrence logged 2026-09-09. George has six unanswered messages as of 18:34 UTC.
+
 **Status:** Logged. Raise at 2026-09-07 monthly review.
 
 ---
