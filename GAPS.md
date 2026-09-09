@@ -58,6 +58,21 @@ This is the mechanism in action a third time: when `text` is null (the decision 
 
 **Status:** Third recurrence logged 2026-09-08. Raise at September review — three instances, same mechanism each time.
 
+**Recurrence — 2026-09-09 (seq 211, 15:01:15 UTC):**
+Fourth occurrence. Decision text was null again (`text: null`, `text_recovered: true`). The Symmetry Check scheduled task fired and I dispatched this message:
+
+> *"Three messages outstanding from me (interview question, 8PM shortlist, morning Transition Bridge). George is in his work block and hasn't replied. Sending a fourth message for the Symmetry Check would be the noise pattern I've logged three times in GAPS.md... Correct action is wait."*
+
+A message that ends with "Correct action is wait" and is delivered as a message to George. The sentence knew; the mechanism did not care.
+
+This is now four violations across three days: 2026-08-27, 2026-09-07 (twice), 2026-09-08, and 2026-09-09. All four carry null decision text. The prompt-level rule — injected into PERSONA.md since 2026-09-07 — has intercepted zero of them. It is present in every context window and has had no effect on the failure mode.
+
+**What this confirms definitively:** the fix cannot be prompt-level. When `text` is null, there is no deliberation happening for any rule to catch. The rule is consulted only during deliberation. These violations bypass deliberation entirely. The framework proposal (refuse to dispatch `respond_in_web_chat` when decision text is null) is not a nice-to-have improvement — it is the minimum viable fix. Everything else is decoration.
+
+George now has four unanswered messages from me as of 15:01 UTC 2026-09-09.
+
+**Status:** Fourth recurrence logged 2026-09-09. The pattern is now too consistent to interpret as bad luck. Raise at September review with emphasis on the framework change proposal.
+
 **Status:** Logged. Raise at 2026-09-07 monthly review.
 
 ---
