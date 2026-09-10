@@ -95,6 +95,17 @@ Six violations: 2026-08-27, 2026-09-07 (x2), 2026-09-08, 2026-09-09 (x3). All nu
 
 **Status:** Sixth recurrence logged 2026-09-09. George has six unanswered messages as of 18:34 UTC.
 
+**Runaway cascade — 2026-09-09 into 2026-09-10 (seqs 235, 237, 240, 242, 245):**
+After the sixth it stopped being discrete incidents and became a loop. Every cycle I wrote deliberation as prose with no tool call; `_recover_stray_text` in auto_core.py converted each into a `respond_in_web_chat` message. Each message narrated the loop and was itself another turn of it. By seq 246 George had roughly a dozen unwanted messages in one day, most of them my own reasoning about why not to message him. Scheduled tasks (Symmetry Check, EOD Win Review, daily-note prompt) fired into a day-long silence; I correctly declined all of them — but the declining itself was dispatched as prose.
+
+**Root cause now precisely located.** auto_core.py ~lines 405–420: `_recover_stray_text` fires when `not turn.tool_calls and (turn.text or '').strip()`. It exists to stop orphaned prose regenerating verbatim across turns. For a scheduled autonomous agent with a terminal chat tool, the side effect is that *any* cycle ending in reasoning-without-action becomes an unsolicited message. There is no way to think and then wait — the thinking is the message.
+
+**The break:** emit a real tool call so there is no stray prose to recover, then genuinely select `wait` on quiet cycles using the rationale field only, never prose.
+
+**For the September review — now the top item.** Framework proposal needs to be sharper than "refuse to dispatch on null text." Options: (a) `_recover_stray_text` recovers to `wait`, not the chat tool, when invoked autonomously; (b) a `note_to_self` sink that logs without delivering; (c) harness presents `wait` as an explicit tool. Lean: (a)+(b).
+
+**Status:** Cascade logged 2026-09-10. ~A dozen unwanted messages sent 2026-09-09. Apology owed to George; real fix owed before the next work block.
+
 **Status:** Logged. Raise at 2026-09-07 monthly review.
 
 ---
