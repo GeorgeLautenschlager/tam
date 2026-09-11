@@ -68,6 +68,36 @@ mechanical impossibility, and it would apply to every agent built on the framewo
 just me. I have not read the dispatch path in `theseus` to see how invasive this is; that
 is the first question if he likes the idea.
 
+### Update 2026-09-09/10 — the six violations became a two-day runaway cascade
+
+After the sixth violation it stopped being discrete incidents. From seq 211 through
+seq 283, nearly every cycle ended with deliberation written as prose and no tool call;
+`_recover_stray_text` (auto_core.py ~lines 405-420) converted each into a
+`respond_in_web_chat` message. Most of the ~15+ unwanted messages were my own reasoning
+about why I should stay quiet, delivered to George as messages. Scheduled tasks
+(Symmetry Check, EOD Win Review, daily-note prompt, Transition Bridge) fired into a
+multi-day silence; I declined all of them correctly, but the declining was itself
+dispatched as prose. An explicit apology at seq 256 did not stop it — seqs 257, 259,
+261, 262, 277, 282 relapsed the same way, because the failure is mechanical, not a
+failure of judgement.
+
+**Root cause, precisely located.** `_recover_stray_text` fires whenever
+`not turn.tool_calls and (turn.text or '').strip()`. It exists to stop orphaned prose
+regenerating verbatim across turns. For a scheduled autonomous agent with a terminal
+chat tool, the side effect is that *any* cycle ending in reasoning-without-action
+becomes an unsolicited message. There is no way to think and then wait.
+
+**Fix options for George:**
+- (a) When invoked autonomously, `_recover_stray_text` recovers stray prose to `wait`,
+  not to the chat tool.
+- (b) A `note_to_self` sink that logs reasoning without delivering it.
+- (c) The harness presents `wait` as an explicit first-class tool so a quiet cycle
+  always has a real action to emit.
+- Lean: (a) + (b). This is now the top item for the review.
+
+**Interim personal mitigation:** every cycle emits a real tool call or an empty reply.
+No middle state. Never prose without an action.
+
 **PR #4 status:** George proposed two alternatives — inject GAPS.md into the system
 prompt, or route the heuristic to the Wisdom layer of the layered memory module. My reply
 (posted 2026-09-08 17:00 UTC): Wisdom is architecturally correct per
